@@ -26,9 +26,9 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # --- Threshold Config ---
-    loss_threshold = 0.28
+    loss_threshold = 0.15
     use_finecam_only = False
-    plot = True
+    plot = False
 
     # --- Transforms ---
     transform = transforms.Compose([

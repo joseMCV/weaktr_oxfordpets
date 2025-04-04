@@ -28,8 +28,8 @@ def main(epochs=15, seed=42):
     finecam_dir.mkdir(exist_ok=True)
     cam_dir = Path("FineCAMs")
     batch_size = 64
-    epochs = 10
-    lr = 1e-4
+    epochs = epochs
+    lr = 5e-2
 
     # ---- Image Transform ----
     transform = transforms.Compose([
