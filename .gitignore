@@ -1,0 +1,62 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environment
+.env/
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# VSCode settings
+.vscode/
+
+# PyCharm settings
+.idea/
+
+# Jupyter Notebook metadata
+*.nbconvert.ipynb
+
+# Data and models
+*.h5
+*.ckpt
+*.pth
+*.pt
+*.log
+*.npy
+*.npz
+
+# Temporary files
+*.bak
+*.swp
+*.tmp
+*.temp
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Output directories
+__output__/
+outputs/
+logs/
+checkpoints/
+models/
+runs/
+
+# Project-specific
+Models/
+FineCAMs/
+RefinedMasks/
+Data/Split/
+*.ipynb
