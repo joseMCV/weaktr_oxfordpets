@@ -53,7 +53,6 @@ def main():
 
     for blk in model.blocks:
         blk.attn.forward = MethodType(store_attn, blk.attn)
-
     
     # ---- Process and Save Fine CAMs ----
     image_files = sorted([f for f in os.listdir(image_dir) if f.endswith('.jpg')])

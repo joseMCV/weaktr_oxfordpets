@@ -10,7 +10,7 @@ from torchvision.datasets import VisionDataset
 import os
 from utils.utils import PetSegmentationDataset, compute_iou
 
-def main():
+def main(plot=False):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # --- Paths ---
     model_path = Path("Models")
@@ -110,28 +110,28 @@ def main():
     print("Segmentation Metrics on Test Set:")
     print_metrics("Supervised", metrics_sup)
     print_metrics("Weakly-Supervised", metrics_ws)
+    if plot:
+        # --- Visualize Samples ---
+        for img, gt, pred_sup, pred_ws in samples:
+            img_np = unnormalize(img.squeeze()).permute(1, 2, 0).numpy()
+            gt_np = gt.squeeze().numpy()
+            sup_np = pred_sup.squeeze().numpy()
+            ws_np = pred_ws.squeeze().numpy()
 
-    # --- Visualize Samples ---
-    for img, gt, pred_sup, pred_ws in samples:
-        img_np = unnormalize(img.squeeze()).permute(1, 2, 0).numpy()
-        gt_np = gt.squeeze().numpy()
-        sup_np = pred_sup.squeeze().numpy()
-        ws_np = pred_ws.squeeze().numpy()
+            iou_sup = ((sup_np * gt_np).sum() + 1e-6) / (((sup_np + gt_np) >= 1).sum() + 1e-6)
+            iou_ws = ((ws_np * gt_np).sum() + 1e-6) / (((ws_np + gt_np) >= 1).sum() + 1e-6)
 
-        iou_sup = ((sup_np * gt_np).sum() + 1e-6) / (((sup_np + gt_np) >= 1).sum() + 1e-6)
-        iou_ws = ((ws_np * gt_np).sum() + 1e-6) / (((ws_np + gt_np) >= 1).sum() + 1e-6)
+            fig, axs = plt.subplots(1, 4, figsize=(16, 4))
+            axs[0].imshow(img_np)
+            axs[0].set_title("Original Image")
+            axs[1].imshow(gt_np, cmap='gray')
+            axs[1].set_title("Ground Truth")
+            axs[2].imshow(sup_np, cmap='gray')
+            axs[2].set_title(f"Supervised Prediction\nIoU: {iou_sup:.3f}")
+            axs[3].imshow(ws_np, cmap='gray')
+            axs[3].set_title(f"Weakly-Supervised Prediction\nIoU: {iou_ws:.3f}")
 
-        fig, axs = plt.subplots(1, 4, figsize=(16, 4))
-        axs[0].imshow(img_np)
-        axs[0].set_title("Original Image")
-        axs[1].imshow(gt_np, cmap='gray')
-        axs[1].set_title("Ground Truth")
-        axs[2].imshow(sup_np, cmap='gray')
-        axs[2].set_title(f"Supervised Prediction\nIoU: {iou_sup:.3f}")
-        axs[3].imshow(ws_np, cmap='gray')
-        axs[3].set_title(f"Weakly-Supervised Prediction\nIoU: {iou_ws:.3f}")
-
-        for ax in axs:
-            ax.axis('off')
-        plt.tight_layout()
-        plt.show()
+            for ax in axs:
+                ax.axis('off')
+            plt.tight_layout()
+            plt.show()

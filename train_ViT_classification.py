@@ -5,12 +5,12 @@ from torch.utils.data import DataLoader, random_split
 from torch import optim
 from pathlib import Path
 
-from utils.utils import OxfordPetBreedDataset, train_one_epoch, validate
+from utils.utils import OxfordPetBreedDataset, train_one_epoch, validate, set_seed
 from torchvision import transforms
 
 def main(epochs=15, seed=42):
     seed = seed
-    torch.manual_seed(seed)
+    set_seed(seed)
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # Image Transformations

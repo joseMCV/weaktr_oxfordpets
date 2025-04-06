@@ -7,10 +7,11 @@ import build_masks
 import train_supervised_gt
 import train_supervised_ws
 import test_results
-
+from utils.utils import set_seed
 
 def main(train: bool):
-    seed = 24
+    seed = 42
+    set_seed(seed)
     if train:
         print("Starting training process...")
         print("=" * 50)

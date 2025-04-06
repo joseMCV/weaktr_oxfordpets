@@ -26,7 +26,7 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # --- Threshold Config ---
-    loss_threshold = 0.15
+    loss_threshold = 0.35
     use_finecam_only = False
     plot = False
 

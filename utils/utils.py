@@ -1,5 +1,6 @@
 import torch
 import os
+import random
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -16,6 +17,15 @@ seed = 24
 torch.manual_seed(seed)
 np.random.seed(seed)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+#%%
+def set_seed(seed=42):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 #%%
 # # CLASSIFICATION TASK

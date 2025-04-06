@@ -1,10 +1,11 @@
 import torch
 from pathlib import Path
 import shutil
+from utils.utils import set_seed
 
 def main(seed=42):
     seed = seed
-    torch.manual_seed(seed)
+    set_seed(seed)
     # Input image directory
     image_dir = Path("Data/images")
 
