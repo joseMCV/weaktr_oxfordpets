@@ -10,12 +10,15 @@ from torchvision.datasets import VisionDataset
 import os
 from utils.utils import PetSegmentationDataset, compute_iou
 
-def main(plot=False):
+def main(plot=False, vit_model='tiny', decoder_size = "medium", gt_ratio=0.0):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # --- Paths ---
     model_path = Path("Models")
     supervised_model_path = model_path / "segmentation_best_sup.pth"
-    ws_model_path = model_path / "segmentation_best_ws.pth"
+    if gt_ratio > 0:
+        ws_model_path = model_path / f"segmentation_best_ws_{vit_model}_{decoder_size}_gt{int(gt_ratio*100)}.pth"
+    if gt_ratio == 0:
+        ws_model_path = model_path / f"segmentation_best_ws_{vit_model}_{decoder_size}.pth"
     image_dir = Path("Data/Split/test/images")
     gt_mask_dir = Path("Data/annotations/trimaps")
 

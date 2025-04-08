@@ -8,38 +8,32 @@ from tqdm import tqdm
 from utils.utils import PetSegmentationDataset, compute_iou
 import torchvision.models.segmentation as models
 
-def main(seed=42):
+def main(seed=42, vit_model='small', decoder_size="medium", transform=None, epochs=10, gt_ratio=0.0):
     seed = seed
     torch.manual_seed(seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model_path = Path("Models")
     image_dir= Path("Data/Split/train/images")
-    finecam_dir = Path("FineCAMs")
-    finecam_dir.mkdir(exist_ok=True)
-    cam_dir = Path("FineCAMs")
+    finecam_dir = Path(f"FineCAMs_{vit_model}")
 
-    decoder_path = model_path.joinpath("decoder_best.pth")
-    vit_path = model_path.joinpath("vit_pet_classifier_best.pth")
+
+    decoder_path = model_path.joinpath(f"{decoder_size}_decoder_best.pth")
+    vit_path = model_path.joinpath(f"{vit_model}_vit_pet_classifier_best.pth")
     
     gt_mask_dir = Path("Data/annotations/trimaps")
-    mask_dir = Path("RefinedMasks")
+    mask_dir = Path(f"RefinedMasks_{vit_model}_{decoder_size}")
     model_path = Path("Models")
 
     # --- Transforms ---
-    img_transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406],
-                            [0.229, 0.224, 0.225])
-    ])
+    img_transform = transform
 
     mask_transform = transforms.Compose([
         transforms.Resize((224, 224), interpolation=Image.NEAREST),
         transforms.ToTensor()
     ])
 
-    epochs = 10
+    epochs = epochs
 
     # --- Dataset & Loader ---
     dataset = PetSegmentationDataset(image_dir, mask_dir, gt_mask_dir,
@@ -75,7 +69,19 @@ def main(seed=42):
             gt_masks = gt_masks.to(device)
 
             preds = model(imgs)['out']
-            loss = criterion(preds, pseudo_masks)
+            if gt_ratio > 0.0:
+                batch_size = imgs.size(0)
+                num_gt = max(1, int(gt_ratio * batch_size))
+
+                # Create a supervision mask
+                supervision_masks = pseudo_masks.clone()
+                if num_gt > 0:
+                    indices = torch.randperm(batch_size)[:num_gt]
+                    supervision_masks[indices] = gt_masks[indices]
+
+                loss = criterion(preds, supervision_masks)
+            else:
+                loss = criterion(preds, pseudo_masks)
 
             optimizer.zero_grad()
             loss.backward()
@@ -110,15 +116,19 @@ def main(seed=42):
         avg_val_loss = val_loss / len(val_loader)
         avg_val_iou_gt = val_iou_gt / len(val_loader)
         avg_val_iou_pseudo = val_iou_pseudo / len(val_loader)
-
+        if gt_ratio>0.0:
+            print(f"Using {num_gt}/{batch_size} GT masks for training this batch.")
         print(f"Epoch {epoch}:")
         print(f"  Train Loss     : {avg_train_loss:.4f}")
-        print(f"  Train IoU (Pseudo): {avg_train_iou_pseudo:.4f} | Train IoU (GT): {avg_train_iou_gt:.4f}")
+        # print(f"  Train IoU (Pseudo): {avg_train_iou_pseudo:.4f} | Train IoU (GT): {avg_train_iou_gt:.4f}")
         print(f"  Val   Loss     : {avg_val_loss:.4f}")
-        print(f"  Val   IoU (Pseudo): {avg_val_iou_pseudo:.4f}  | IoU (GT) : {avg_val_iou_gt:.4f}")
+        # print(f"  Val   IoU (Pseudo): {avg_val_iou_pseudo:.4f}  | IoU (GT) : {avg_val_iou_gt:.4f}")
 
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
-            torch.save(model.state_dict(), model_path / "segmentation_best_ws.pth")
+            if gt_ratio>0.0:
+                torch.save(model.state_dict(), model_path / f"segmentation_best_ws_{vit_model}_{decoder_size}_gt{int(gt_ratio*100)}.pth")
+            else:
+                torch.save(model.state_dict(), model_path / f"segmentation_best_ws_{vit_model}_{decoder_size}.pth")
             print(f"Saved new best model (Val Loss: {avg_val_loss:.4f})")
 

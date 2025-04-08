@@ -13,27 +13,21 @@ from types import MethodType
 
 from utils.utils import get_patch_tokens, extract_cls2patch_attention, adaptive_attention_fusion, generate_coarse_cam, generate_fine_cam
 
-def main():
+def main(vit_model='tiny', transform=None):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # Image Transformations
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                            std=[0.229, 0.224, 0.225])
-    ])
     model_path = Path("Models")
     image_dir= Path("Data/Split/train/images")
-    model_path = model_path.joinpath("vit_pet_classifier_best.pth")
-    finecam_dir = Path("FineCAMs")
+    model_path = model_path.joinpath(f"{vit_model}_vit_pet_classifier_best.pth")
+    finecam_dir = Path(f"FineCAMs_{vit_model}")
     finecam_dir.mkdir(exist_ok=True)
     num_classes = 37
-    img_size = 224
-    patch_size = 16
 
     # ---- Load model ----
-    model = timm.create_model('deit_tiny_patch16_224', pretrained=False, num_classes=num_classes)
+    if vit_model == 'tiny':
+        model = timm.create_model('deit_tiny_patch16_224', pretrained=False, num_classes=num_classes)
+    elif vit_model == 'small':
+        model = timm.create_model('vit_small_patch16_224', pretrained=False, num_classes=num_classes)
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval().to(device)
 

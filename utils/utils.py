@@ -13,9 +13,7 @@ from PIL import Image
 from tqdm import tqdm
 from pathlib import Path
 
-seed = 24
-torch.manual_seed(seed)
-np.random.seed(seed)
+seed = 42
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 #%%
@@ -27,6 +25,7 @@ def set_seed(seed=42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+set_seed(seed)
 #%%
 # # CLASSIFICATION TASK
 class OxfordPetBreedDataset(Dataset):
@@ -178,6 +177,30 @@ class DecoderTrainingDataset(Dataset):
 
         return patch_tokens, fine_cam
 
+class SmallDecoderHead(nn.Module):
+    def __init__(self, input_dim=192):
+        super().__init__()
+        self.decoder = nn.Sequential(
+            nn.Conv2d(input_dim, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),  # 14 → 28
+            nn.Conv2d(64, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),  # 28 → 56
+            nn.Conv2d(32, 16, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+
+            nn.Upsample(scale_factor=4, mode='bilinear', align_corners=False),  # 56 → 224
+            nn.Conv2d(16, 1, kernel_size=1)  # Output logits
+        )
+
+    def forward(self, x):
+        return self.decoder(x)
+
 class DecoderHead(nn.Module):
     def __init__(self, input_dim=192):  # 192 = ViT tiny patch token dim
         super().__init__()
@@ -201,6 +224,32 @@ class DecoderHead(nn.Module):
 
     def forward(self, x):
         return self.decoder(x)
+
+class LargeDecoderHead(nn.Module):
+    def __init__(self, input_dim=192):
+        super().__init__()
+        self.decoder = nn.Sequential(
+            nn.Conv2d(input_dim, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),  # 14 → 28
+            nn.Conv2d(256, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),  # 28 → 56
+            nn.Conv2d(128, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+
+            nn.Upsample(scale_factor=4, mode='bilinear', align_corners=False),  # 56 → 224
+            nn.Conv2d(64, 1, kernel_size=1)  # Output logits
+        )
+
+    def forward(self, x):
+        return self.decoder(x)
+
 
 def compute_iou(preds, targets, threshold=0.5):
     preds = (torch.sigmoid(preds) > threshold).float()
@@ -228,7 +277,7 @@ def generate_mask(image_path, cam_path, threshold, transform, vit_model, decoder
     fine_cam = np.load(cam_path)
 
     if use_finecam_only:
-        mask = (fine_cam > threshold).astype(np.uint8)
+        mask = (fine_cam <= threshold).astype(np.uint8)
         return mask, img, fine_cam, fine_cam
 
     img_tensor = transform(img).unsqueeze(0).to(device)

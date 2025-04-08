@@ -8,9 +8,9 @@ from pathlib import Path
 import os
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from utils.utils import DecoderHead, generate_mask
+from utils.utils import DecoderHead, generate_mask, LargeDecoderHead, SmallDecoderHead
 
-def main():
+def main(vit_model='tiny', decoder_size="medium",loss_threshold=0.01, use_finecam_only=True, transform=None):
     seed = 42
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -19,31 +19,33 @@ def main():
     # --- Paths ---
     model_path = Path("Models")
     image_dir = Path("Data/Split/train/images")
-    cam_dir = Path("FineCAMs")
-    vit_path = model_path / "vit_pet_classifier_best.pth"
-    decoder_path = model_path / "decoder_best.pth"
-    output_dir = Path("RefinedMasks")  # NEW: clear name for output
+    cam_dir = Path(f"FineCAMs_{vit_model}")
+    vit_path = model_path / f"{vit_model}_vit_pet_classifier_best.pth"
+    decoder_path = model_path / f"{vit_model}_{decoder_size}_decoder_best.pth"
+    output_dir = Path(f"RefinedMasks_{vit_model}_{decoder_size}")  # NEW: clear name for output
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # --- Threshold Config ---
-    loss_threshold = 0.35
-    use_finecam_only = False
     plot = False
 
-    # --- Transforms ---
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                            std=[0.229, 0.224, 0.225])
-    ])
 
     # --- Load Models ---
-    vit_model = timm.create_model('deit_tiny_patch16_224', pretrained=False, num_classes=37)
+    if vit_model == 'tiny':
+        vit_model = timm.create_model('deit_tiny_patch16_224', pretrained=False, num_classes=37)
+        input_dim = 192
+    elif vit_model == 'small':
+        vit_model = timm.create_model('vit_small_patch16_224', pretrained=False, num_classes=37)
+        input_dim = 384
+    else:
+        raise ValueError("vit_model must be either 'tiny' or 'small'")
     vit_model.load_state_dict(torch.load(vit_path, map_location=device))
     vit_model.eval().to(device)
-
-    decoder = DecoderHead(input_dim=192).to(device)
+    if decoder_size == "small":
+        decoder = SmallDecoderHead(input_dim=input_dim).to(device)
+    elif decoder_size == "large":
+        decoder = LargeDecoderHead(input_dim=input_dim).to(device)
+    else:
+        decoder = DecoderHead(input_dim=input_dim).to(device)
     decoder.load_state_dict(torch.load(decoder_path, map_location=device))
     decoder.eval()
 
