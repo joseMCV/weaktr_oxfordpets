@@ -15,7 +15,7 @@ def main(train: bool):
     set_seed(seed)
     vit_model = 'tiny'
     decoder_size = "medium"
-    gt_ratio = 0.4
+    gt_ratio = 0.0
     # loss_threshold = 0.05  best for small medium use_finecam_only=True loss_threshold=0.01 10 epochs training_supervised_ws
     # loss_threshold = 0.35  best for tiny medium use_finecam_only=False 4 epochs training_supervised_ws
     # loss_threshold = 0.25 best for tiny large use_finecam_only=False 10 epochs training_supervised_ws
@@ -24,6 +24,7 @@ def main(train: bool):
     loss_threshold = 0.35
     use_finecam_only = False
     train_full_gt = False
+    plot_result_masks = False
     epochs=4
     print('configurations:')
     print(f"vit model: {vit_model}")
@@ -43,27 +44,27 @@ def main(train: bool):
                             std=[0.229, 0.224, 0.225])
     ])
     if train:
-        print("Starting training process...")
-        print("=" * 50)
+        # print("Starting training process...")
+        # print("=" * 50)
 
-        print("Splitting data into train and test sets...")
-        split_data.main(seed=seed)
-        print("=" * 50)
+        # print("Splitting data into train and test sets...")
+        # split_data.main(seed=seed)
+        # print("=" * 50)
 
-        print("Training ViT model for image classification...")
-        train_ViT_classification.main(seed=seed, vit_model=vit_model, transform=transform)
-        print("=" * 50)
+        # print("Training ViT model for image classification...")
+        # train_ViT_classification.main(seed=seed, vit_model=vit_model, transform=transform)
+        # print("=" * 50)
 
-        print("Building FineCAMs...")
-        build_fine_cams.main(vit_model=vit_model, transform=transform)
-        print("=" * 50)
+        # print("Building FineCAMs...")
+        # build_fine_cams.main(vit_model=vit_model, transform=transform)
+        # print("=" * 50)
 
-        print("Training CNN decoder...")
-        train_CNN_decoder.main(seed=seed, decoder_size=decoder_size, vit_model=vit_model, transform=transform)
-        print("=" * 50)
+        # print("Training CNN decoder...")
+        # train_CNN_decoder.main(seed=seed, decoder_size=decoder_size, vit_model=vit_model, transform=transform)
+        # print("=" * 50)
 
         print("Building masks...")
-        build_masks.main(vit_model=vit_model, decoder_size=decoder_size, loss_threshold=loss_threshold, use_finecam_only=use_finecam_only, transform=transform)
+        build_masks.main(vit_model=vit_model, decoder_size=decoder_size, loss_threshold=loss_threshold, use_finecam_only=use_finecam_only, transform=transform, plot=False)
         print("=" * 50)
 
         if train_full_gt:
@@ -78,7 +79,7 @@ def main(train: bool):
         print("=" * 50)
 
     print("Testing results...")
-    test_results.main(vit_model=vit_model, decoder_size=decoder_size, gt_ratio=gt_ratio)
+    test_results.main(vit_model=vit_model, decoder_size=decoder_size, gt_ratio=gt_ratio, plot=plot_result_masks)
     print("=" * 50)
 
     print("All processes completed successfully.")

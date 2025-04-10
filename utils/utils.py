@@ -330,3 +330,56 @@ class PetSegmentationDataset(VisionDataset):
         gt_mask = ((gt_mask == 2) | (gt_mask == 3)).float().unsqueeze(0)
 
         return img, mask, gt_mask
+#%%
+def compute_clipped_loss(preds, fine_cams, loss_fn, patch_size=120, tau=1.2):
+    """
+    Compute loss using gradient clipping strategy based on WeakTr.
+
+    Args:
+        preds (torch.Tensor): Output from decoder (B, 1, H, W)
+        fine_cams (torch.Tensor): Target pseudo labels (B, 1, H, W)
+        loss_fn (callable): Loss function (e.g., BCEWithLogitsLoss with reduction='none')
+        patch_size (int): Patch size for local gradient threshold
+        tau (float): Gradient clipping threshold coefficient
+    Returns:
+        clipped_loss (torch.Tensor): Final scalar loss for backprop
+    """
+
+    # Ensure grads can be computed
+    preds.requires_grad_(True)
+
+    # Pixel-wise BCE loss
+    loss_per_pixel = loss_fn(preds, fine_cams)  # (B, 1, H, W)
+
+    # Sum loss to scalar for gradient computation
+    loss_scalar = (loss_per_pixel * fine_cams.clamp(0, 1)).sum() / fine_cams.clamp(0, 1).sum()
+
+    # Compute gradient of the scalar loss w.r.t. each pixel prediction
+    grads = torch.autograd.grad(
+        loss_scalar, preds, create_graph=True, retain_graph=True, only_inputs=True
+    )[0]  # (B, 1, H, W)
+
+    grad_magnitude = grads.abs().detach()  # (B, 1, H, W)
+
+    B, _, H, W = preds.shape
+    clipped_losses = []
+
+    for i in range(B):
+        # Unfold to get non-overlapping patches (N_patches, patch_area)
+        grad_patches = F.unfold(grad_magnitude[i:i+1], kernel_size=patch_size, stride=patch_size)  # (1, patch_area, L)
+        loss_patches = F.unfold(loss_per_pixel[i:i+1], kernel_size=patch_size, stride=patch_size)
+
+        # Compute mean gradient per patch
+        lambda_patches = grad_patches.mean(dim=1)  # (L,)
+        lambda_global = lambda_patches.mean()      # Scalar
+
+        # Compute clipping mask (1 = keep, 0 = discard)
+        mask = (grad_patches <= torch.max(lambda_patches, lambda_global)).float()
+
+        # Apply clip mask to patch-wise losses
+        masked_loss = (loss_patches * mask).sum() / (mask.sum() + 1e-6)  # Avoid divide-by-zero
+
+        clipped_losses.append(masked_loss)
+
+    # Final loss is the average over batch
+    return torch.stack(clipped_losses).mean()

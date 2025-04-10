@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from utils.utils import DecoderHead, generate_mask, LargeDecoderHead, SmallDecoderHead
 
-def main(vit_model='tiny', decoder_size="medium",loss_threshold=0.01, use_finecam_only=True, transform=None):
+def main(vit_model='tiny', decoder_size="medium",loss_threshold=0.35, use_finecam_only=False, transform=None, plot=True):
     seed = 42
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -25,8 +25,6 @@ def main(vit_model='tiny', decoder_size="medium",loss_threshold=0.01, use_fineca
     output_dir = Path(f"RefinedMasks_{vit_model}_{decoder_size}")  # NEW: clear name for output
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # --- Threshold Config ---
-    plot = False
 
 
     # --- Load Models ---
@@ -80,3 +78,11 @@ def main(vit_model='tiny', decoder_size="medium",loss_threshold=0.01, use_fineca
         mask, _, _, _ = generate_mask(
             f, cam_f, loss_threshold, transform, vit_model, decoder, use_finecam_only)
         Image.fromarray((mask * 255).astype(np.uint8)).save(output_dir / f.with_suffix(".png").name)
+if __name__ == "__main__":
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                            std=[0.229, 0.224, 0.225])
+    ])
+    main(transform=transform)

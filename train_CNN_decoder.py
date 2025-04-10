@@ -6,7 +6,7 @@ import numpy as np
 from torchvision import transforms
 from torch.utils.data import DataLoader, random_split
 from pathlib import Path
-from utils.utils import DecoderTrainingDataset, DecoderHead, LargeDecoderHead, SmallDecoderHead, compute_iou, set_seed
+from utils.utils import DecoderTrainingDataset, DecoderHead, LargeDecoderHead, SmallDecoderHead, compute_iou, set_seed, compute_clipped_loss
 
 def main(epochs=15, seed=42, decoder_size="medium", vit_model='tiny', transform=None):
     print("Starting decoder training...")
@@ -78,9 +78,10 @@ def main(epochs=15, seed=42, decoder_size="medium", vit_model='tiny', transform=
 
             # Forward pass
             preds = decoder(patch_tokens)
-            loss_per_pixel = loss_fn(preds, fine_cams)
-            weights = fine_cams.clamp(0, 1)
-            masked_loss = (loss_per_pixel * weights).sum() / weights.sum()
+            # loss_per_pixel = loss_fn(preds, fine_cams)
+            # weights = fine_cams.clamp(0, 1)
+            # masked_loss = (loss_per_pixel * weights).sum() / weights.sum()
+            masked_loss = compute_clipped_loss(preds, fine_cams, loss_fn, patch_size=120, tau=1.2)
 
             # Backprop
             optimizer.zero_grad()
