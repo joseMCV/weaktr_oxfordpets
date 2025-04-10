@@ -374,7 +374,8 @@ def compute_clipped_loss(preds, fine_cams, loss_fn, patch_size=120, tau=1.2):
         lambda_global = lambda_patches.mean()      # Scalar
 
         # Compute clipping mask (1 = keep, 0 = discard)
-        mask = (grad_patches <= torch.max(lambda_patches, lambda_global)).float()
+        threshold = torch.max(lambda_patches, lambda_global) * tau
+        mask = (grad_patches <= threshold).float()
 
         # Apply clip mask to patch-wise losses
         masked_loss = (loss_patches * mask).sum() / (mask.sum() + 1e-6)  # Avoid divide-by-zero

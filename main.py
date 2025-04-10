@@ -59,9 +59,9 @@ def main(train: bool):
         # build_fine_cams.main(vit_model=vit_model, transform=transform)
         # print("=" * 50)
 
-        # print("Training CNN decoder...")
-        # train_CNN_decoder.main(seed=seed, decoder_size=decoder_size, vit_model=vit_model, transform=transform)
-        # print("=" * 50)
+        print("Training CNN decoder...")
+        train_CNN_decoder.main(seed=seed, decoder_size=decoder_size, vit_model=vit_model, transform=transform)
+        print("=" * 50)
 
         print("Building masks...")
         build_masks.main(vit_model=vit_model, decoder_size=decoder_size, loss_threshold=loss_threshold, use_finecam_only=use_finecam_only, transform=transform, plot=False)
